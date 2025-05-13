@@ -3,91 +3,31 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 	//"slices"
 )
 
-func is_same_community(u, v int64, communities []map[int64]struct{}) int64{
-	
-	for _, key := range communities{
-		if _, exists_v := key[v]; exists_v{
-			if _, exists_u := key[u]; exists_u{
-				return 1
-			}
-		}
-	}
-	
-	return 0
-}
-
-func modularity(g *Graph, lambda_resolution float64, communities ...[]map[int64]struct{}) ([]float64){
-	var gen_modularity []float64
-	m := g.get_number_of_edges()
-	
-	g.compute_in_degrees()
-	adj_map := make(map[int64]map[int64]struct{})
-		for u, neighbors := range g.edges {
-			adj_map[u] = make(map[int64]struct{})
-			for _, v := range neighbors {
-				adj_map[u][v] = struct{}{}
-			}
-		}
-	fmt.Println(m)
-	
-	for _, community := range communities{
-		var modularity float64 = 0
-		
-		for _, node_i := range g.vertices{
-			var ki_out float64
-			
-			if g.edges[int64(node_i)] != nil{
-				ki_out = float64(len(g.edges[int64(node_i)]))
-			} else{
-				ki_out = 0
-			}
-			
-			for _, node_j := range g.vertices{
-				
-				kj_in := float64(g.in_degrees[(int64(node_j))])
-				A_ij := 0.0
-				if _, ok := adj_map[node_i][node_j]; ok {
-					A_ij = 1.0
-				}
-				
-				delta_ij := float64(is_same_community(int64(node_i), int64(node_j), community))
-				
-				expected := (ki_out*kj_in) / float64(m)
-				
-				modularity += ((A_ij) - lambda_resolution * expected) * delta_ij
-				//fmt.Println(modularity)
-			}
-		}
-		modularity = modularity/ float64(m)
-		gen_modularity = append(gen_modularity, modularity)
-	}
-	
-	return gen_modularity
-}
-
 func main(){
-	graph_scale_free, err := read_graph_form_file("scale_free_network.txt")
+	
+	graph_scale_free, err := read_directed_graph_form_file("scale_free_network.txt")
 	if err != nil{
 		fmt.Println(err)
 		return
 	}
 	
-	sf_all_communities, err := read_communities("out")
+	sf_all_communities, err := read_communities("./sf_graph/out")
 	if err != nil{
 		log.Fatal(err)
 	}
 	
-	boolean := is_same_community(93, 40, sf_all_communities[69])
-	fmt.Println(boolean)
 	
+	sf_modularities := paralell_modularity(graph_scale_free, 1.0, sf_all_communities...)
+	for index, modularity := range sf_modularities{
+		fmt.Println(index+1, ": ", modularity)
+	}
 	
-	//modularities := modularity(graph, 1.0, all_communities...)
-	//fmt.Println(modularities[9])
-		
-	g_congress, err := read_graph_form_file("congress.txt")
+	//start_congress := time.Now()
+	g_congress, err := read_directed_graph_form_file("./congress_graph/congress.txt")
 	if err != nil{
 		fmt.Println(err)
 		return
@@ -95,12 +35,16 @@ func main(){
 		
 	fmt.Println(g_congress)
 		
-	congress_all_communities, err := read_communities("community_gen")
+	congress_all_communities, err := read_communities("./congress_graph/congress_communities_gen")
 	if err != nil{
 		log.Fatal(err)
 	}
-		
+	
+	start_congress := time.Now()
 	congress_modularities := paralell_modularity(g_congress, 1.0, congress_all_communities...)
+	end_congress := time.Now()
+	elapsed_congress := end_congress.Sub(start_congress)
+	
 	for index, modularity := range congress_modularities{
 		fmt.Println(index+1, ": ", modularity)
 	}
@@ -118,6 +62,7 @@ func main(){
 	fmt.Println("Best modularity measure = ", congress_higher_modularity_measure)
 	fmt.Println("From community ", index_of_higher+1)
 	
+	/* 
 	scale_free_modularities := paralell_modularity(graph_scale_free, 1.0, sf_all_communities...)
 	
 	for index, modularity := range scale_free_modularities{
@@ -128,13 +73,40 @@ func main(){
 		
 	for index, modularity_measure := range scale_free_modularities{
 		if modularity_measure > sf_higher_modularity_measure{
-		 	sf_higher_modularity_measure = modularity_measure
+			sf_higher_modularity_measure = modularity_measure
 			index_of_higher = index
 		}
 	}
 	
 	fmt.Println("Best modularity measure = ", sf_higher_modularity_measure)
 	fmt.Println("From community ", index_of_higher+1)
+	
+	*/
+	//start_caveman := time.Now()
+	caveman, err := read_undirected_graph("./caveman_graph/caveman_graph.txt")
+	if err != nil{
+		log.Fatal(err)
+	}
+	
+	caveman_all_communities, err := read_communities_as_graphs(caveman, "./caveman_graph/caveman_communities_gen")
+	if err != nil{
+		log.Fatal(err)
+	}
+	
+	start_caveman := time.Now()
+	caveman_modularities := parallel_alternative_modularity(caveman, 1.0, caveman_all_communities...)
+	end_caveman := time.Now()
+	elapsed_caveman := end_caveman.Sub(start_caveman)
+	
+	for i, modularity := range caveman_modularities{
+		fmt.Println(i+1, ": ", modularity)
+	}
+	
+	fmt.Println(" ")
+	
+	fmt.Println("Times:")
+	fmt.Println("method node by node: ", elapsed_congress)
+	fmt.Println("method from communities: ", elapsed_caveman)
 }
 
 

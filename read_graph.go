@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func read_graph_form_file(file_path string) (*Graph, error){
+func read_directed_graph_form_file(file_path string) (*Directed_Graph, error){
 	file, err := os.Open(file_path)
 	if err != nil{
 		return nil, err
@@ -22,7 +22,7 @@ func read_graph_form_file(file_path string) (*Graph, error){
 	
 	for scanner.Scan(){
 		line := scanner.Text()
-		parts := strings.Split(line, " ")
+		parts := strings.Fields(line)
 		
 		u, err1 := strconv.Atoi(parts[0])
 		v, err2 := strconv.Atoi(parts[1])
@@ -47,7 +47,7 @@ func read_graph_form_file(file_path string) (*Graph, error){
     if err != nil {
         return nil, err
     }
-
+    
     all_communities := [][]map[int64]struct{}{}
 
     for _, entry := range entries {
@@ -83,7 +83,7 @@ func read_graph_form_file(file_path string) (*Graph, error){
         }
         file.Close()
 
-        for len(all_communities) < gen {
+        for len(all_communities) < gen  {
             all_communities = append(all_communities, nil)
         }
         all_communities[gen-1] = communities
